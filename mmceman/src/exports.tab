@@ -1,13 +1,3 @@
-void _retonly(void) {}
-
-int _ret0(void) {
-    return 0;
-}
-
-int _dummy(void) {
-    return 1;
-}
-
 DECLARE_EXPORT_TABLE(mmcedrv, 1, 1)
     DECLARE_EXPORT(_retonly)
     DECLARE_EXPORT(_retonly)
@@ -20,3 +10,9 @@ DECLARE_EXPORT_TABLE(mmcedrv, 1, 1)
     DECLARE_EXPORT(mmcedrv_write)
     DECLARE_EXPORT(mmcedrv_lseek)
 END_EXPORT_TABLE
+
+void _retonly(void) {}
+
+int _ret0(void) {
+    return 0;
+}

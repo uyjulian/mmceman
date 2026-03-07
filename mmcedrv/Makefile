@@ -4,7 +4,7 @@ IOP_INC_DIR ?= ../mmceman/include/
 $(info -- MMCEDRV)
 #Build minimal MMCE driver for use in-game
 IOP_BIN = irx/mmcedrv.irx
-IOP_OBJS = ioplib.o sio2man_hook.o mmce_sio2.o exports.o imports.o mmcedrv.o
+IOP_OBJS = exports.o ioplib.o sio2man_hook.o mmce_sio2.o imports.o mmcedrv.o
 IOP_CFLAGS += -DMMCEDRV
 
 all: $(IOP_BIN)
