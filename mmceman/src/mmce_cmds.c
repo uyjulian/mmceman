@@ -282,3 +282,36 @@ int mmce_cmd_reset(void)
 
     return 0;
 }
+
+int mmce_cmd_set_card_channel(u8 type, u16 card, u16 chan)
+{
+    int res;
+
+    u8 wrbuf[0x9];
+    u8 rdbuf[0x2];
+
+    wrbuf[0x0] = MMCE_ID;           //identifier
+    wrbuf[0x1] = MMCE_CMD_SET_CARD_CHANNEL; //command
+    wrbuf[0x2] = MMCE_RESERVED;     //reserved byte
+    wrbuf[0x3] = type;              //card type (0 = regular, 1 = boot)
+    wrbuf[0x4] = card >> 8;          //card number upper 8 bits
+    wrbuf[0x5] = card & 0xFF;        //card number lower 8 bits
+    wrbuf[0x6] = chan >> 8;          //channel number upper 8 bits
+    wrbuf[0x7] = chan & 0xFF;        //channel number lower 8 bits
+    wrbuf[0x8] = 0xFF;               //termination byte
+
+    mmce_sio2_lock();
+    res = mmce_sio2_tx_rx_pio(sizeof(wrbuf), sizeof(rdbuf), wrbuf, rdbuf, &timeout_1s);
+    mmce_sio2_unlock();
+    if (res == -1) {
+        DPRINTF("%s ERROR: Timedout waiting for /ACK\n", __func__);
+        return -1;
+    }
+
+    if (rdbuf[0x1] != MMCE_REPLY_CONST) {
+        DPRINTF("%s ERROR: Invalid response from card. Got 0x%x, Expected 0x%x\n", __func__, rdbuf[0x1], MMCE_REPLY_CONST);
+        return -1;
+    }
+
+    return 0;
+}

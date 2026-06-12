@@ -39,7 +39,7 @@ Currently assigned product IDs:
 
 TODO: Finish fleshing out spec for status. Currently, bit 0
 is used to denote whether the MMCE is busy. (1 = busy, 0 = not busy).
-This is polled in OPL after sending the GameID to ensure the card switch 
+This is polled in OPL after sending the GameID to ensure the card switch
 has finished before starting the game.
 
 ### 0x3 - Get Card [Implemented]
@@ -104,6 +104,18 @@ Note: The SIO2 expects to receive 255 bytes of data, if the GameID is shorter th
 | 0x04   | 0xff | 0xff | Termination Byte |
 
 Note: Sent on MMCEMAN initialization after successful ping, used to signal the MMCE to close all open file handles and reset the FS state
+
+### 0xA - Set Card and Channel
+| offset | out  |  in  |            description            |
+|--------|------|------|-----------------------------------|
+| 0x03   | var  | 0x0  | Type                              |
+| .      |      |      | 0x0 = Regular card                |
+| .      |      |      | 0x1 = Boot card                   |
+| 0x04   | var  | 0x0  | Card upper 8 bits                 |
+| 0x05   | var  | 0x0  | Card lower 8 bits                 |
+| 0x06   | var  | 0x0  | Channel upper 8 bits              |
+| 0x07   | var  | 0x0  | Channel lower 8 bits              |
+| 0x08   | 0xff | 0xff | Termination byte                  |
 
 ### 0x30 [Temporary Assignment] - Unmount Bootcard [Implemented]
 | offset | out  |  in  |   description    |

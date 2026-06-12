@@ -141,7 +141,7 @@ int mmce_fs_close(iomanX_iop_file_t *file)
 {
     int res = 0;
 
-    u8 wrbuf[0x4];
+    u8 wrbuf[0x6];
     u8 rdbuf[0x6];
 
     DPRINTF("%s fd: %i\n", __func__, (u8)*(int*)file->privdata);
@@ -156,10 +156,12 @@ int mmce_fs_close(iomanX_iop_file_t *file)
     wrbuf[0x1] = MMCE_CMD_FS_CLOSE;         //Command
     wrbuf[0x2] = MMCE_RESERVED;             //Reserved
     wrbuf[0x3] = (u8)*(int*)file->privdata; //File descriptor
+    wrbuf[0x4] = 0xff;                      //Padding
+    wrbuf[0x5] = 0xff;                      //Termination byte
 
     //Packet #1: Command, file descriptor, return value
     mmce_sio2_lock();
-    res = mmce_sio2_tx_rx_pio(0x4, 0x6, wrbuf, rdbuf, &timeout_1s);
+    res = mmce_sio2_tx_rx_pio(sizeof(wrbuf), sizeof(rdbuf), wrbuf, rdbuf, &timeout_1s);
     mmce_sio2_unlock();
 
     if (res == -1) {
@@ -909,6 +911,77 @@ int mmce_fs_getstat(iomanX_iop_file_t *file, const char *name, iox_stat_t *stat)
     return 0;
 }
 
+int	mmce_fs_rename(iomanX_iop_file_t *file, const char *old_name, const char *new_name)
+{
+    int res;
+
+    u8 wrbuf[0x4];
+    u8 rdbuf[0x3];
+
+    DPRINTF("%s unit: %i old_name: %s new_name: %s\n", __func__, file->unit, old_name, new_name);
+
+
+    //Update SIO2 port if unit changed ex mmce0: -> mmce1:
+    mmce_fs_update_unit(file->unit);
+
+    u8 old_filename_len = strlen(old_name) + 1;
+    u8 new_filename_len = strlen(new_name) + 1;
+
+    wrbuf[0x0] = MMCE_ID;                //Identifier
+    wrbuf[0x1] = MMCE_CMD_FS_RENAME;     //Command
+    wrbuf[0x2] = MMCE_RESERVED;          //Reserved
+    wrbuf[0x3] = 0xff;
+
+    mmce_sio2_lock(); //Lock SIO2 for transfer
+
+    //Packet #1: Command and flags
+    res = mmce_sio2_tx_rx_pio(sizeof(wrbuf), 0x2, wrbuf, rdbuf, &timeout_1s);
+    if (res == -1) {
+        DPRINTF("%s ERROR: P1 - Timedout waiting for /ACK\n", __func__);
+        mmce_sio2_unlock();
+        return -1;
+    }
+
+    if (rdbuf[0x1] != MMCE_REPLY_CONST) {
+        DPRINTF("%s ERROR: Invalid response from card. Got 0x%x, Expected 0x%x\n", __func__, rdbuf[0x1], MMCE_REPLY_CONST);
+        mmce_sio2_unlock();
+        return -1;
+    }
+
+    //Packet #2: Old Filename
+    res = mmce_sio2_tx_rx_pio(old_filename_len, 0x0, old_name, NULL, &timeout_1s);
+    if (res == -1) {
+        DPRINTF("%s ERROR: P2 - Timedout waiting for /ACK\n", __func__);
+        mmce_sio2_unlock();
+        return -1;
+    }
+
+    //Packet #3: New Filename
+    res = mmce_sio2_tx_rx_pio(new_filename_len, 0x0, new_name, NULL, &timeout_1s);
+    if (res == -1) {
+        DPRINTF("%s ERROR: P3 - Timedout waiting for /ACK\n", __func__);
+        mmce_sio2_unlock();
+        return -1;
+    }
+
+    //Packet #4: Return value
+    res = mmce_sio2_tx_rx_pio(0x0, sizeof(rdbuf), NULL, rdbuf, &timeout_1s);
+    mmce_sio2_unlock();
+    if (res == -1) {
+        DPRINTF("%s ERROR: P4 - Timedout waiting for /ACK\n", __func__);
+        return -1;
+    }
+
+    if (rdbuf[0x1] != 0x0) {
+        DPRINTF("%s ERROR: Card failed to rename %s to %s, return value %i\n",
+                __func__, old_name, new_name, rdbuf[0x1]);
+        return -1;
+    }
+
+    return 0;
+}
+
+
 s64 mmce_fs_lseek64(iomanX_iop_file_t *file, s64 offset, int whence)
 {
     int res;
@@ -1022,6 +1095,23 @@ int mmce_fs_devctl(iomanX_iop_file_t *fd, const char *name, int cmd, void *arg, 
             res = mmce_cmd_reset();
         break;
 
+        case MMCE_CMD_SET_CARD_CHANNEL:
+        {
+            if (arg == NULL || arglen < 5) {
+                DPRINTF("%s ERROR: Set card/channel requires 5 argument bytes, got %i\n",
+                        __func__, arglen);
+                res = -1;
+                break;
+            }
+
+            u8 *args_ptr = (u8 *)arg;
+            u8 type = args_ptr[0];
+            u16 card = ((u16)args_ptr[1] << 8) | (u16)args_ptr[2];
+            u16 chan = ((u16)args_ptr[3] << 8) | (u16)args_ptr[4];
+            res = mmce_cmd_set_card_channel(type, card, chan);
+        }
+        break;
+
         case MMCE_SETTINGS_ACK_WAIT_CYCLES:
             args = *(u32*)arg;
             mmce_sio2_update_ack_wait_cycles(args);
@@ -1074,7 +1164,7 @@ static iomanX_iop_device_ops_t mmce_fio_ops =
 	&mmce_fs_getstat, //getstat
 	NOT_SUPPORTED_OP, //chstat
     //EXTENDED OPS
-    NOT_SUPPORTED_OP, //rename
+    &mmce_fs_rename, //rename
     NOT_SUPPORTED_OP, //chdir
     NOT_SUPPORTED_OP, //sync
     NOT_SUPPORTED_OP, //mount
