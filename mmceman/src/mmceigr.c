@@ -2,7 +2,6 @@
 #include <sysclib.h>
 #include <tamtypes.h>
 
-#include "ioplib.h"
 #include "mmce_cmds.h"
 #include "sio2regs.h"
 #include "irx_imports.h"

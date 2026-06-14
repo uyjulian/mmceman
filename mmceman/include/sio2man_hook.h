@@ -1,23 +1,33 @@
+/*
+# _____     ___ ____     ___ ____
+#  ____|   |    ____|   |        | |____|
+# |     ___|   |____ ___|    ____| |    \    PS2DEV Open Source Project.
+#-----------------------------------------------------------------------
+# Copyright ps2dev - http://www.ps2dev.org
+# Licenced under Academic Free License version 2.0
+# Review ps2sdk README & LICENSE files for further details.
+#
+# taken from MX4SIO driver for simplicity.
+# all credits go to maximus32
+*/
+
 #ifndef SIO2MAN_HOOK_H
 #define SIO2MAN_HOOK_H
 
-int sio2man_hook_init();
-void sio2man_hook_deinit();
+#ifndef SIO2MAN_HOOK_SUPPORT_SET_INTR_HANDLER
+#define SIO2MAN_HOOK_SUPPORT_SET_INTR_HANDLER 1
+#endif
+
+extern int sio2man_hook_init();
+extern void sio2man_hook_deinit();
 
 // Lock all communication to SIO2MAN
 // this is needed for drivers that communicate directly to sio2, like mx4sio.
 // Do NOT lock for long duration, only for single (high speed) transfers
-void sio2man_hook_sio2_lock();
-void sio2man_hook_sio2_unlock();
-
-// SIO2MAN's intr handler
-extern int (*sio2man_intr_handler_ptr)(void *arg);
-extern void *sio2man_intr_arg_ptr;
-
-// Temporary replacement intr handler
-extern int (*mmce_sio2_intr_handler_ptr)(void *arg);
-extern void *mmce_sio2_intr_arg_ptr;
-
-extern intrman_internals_t *mmce_sio2_intrman_internals_ptr;
+extern void sio2man_hook_sio2_lock();
+extern void sio2man_hook_sio2_unlock();
+#if SIO2MAN_HOOK_SUPPORT_SET_INTR_HANDLER
+extern void sio2man_hook_sio2_set_intr_handler(int (*handler)(void *userdata), void *userdata);
+#endif
 
 #endif

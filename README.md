@@ -65,7 +65,7 @@ Before launching MMCEDRV, all files must be opened by MMCEMAN. Their file descri
 # Known Issues:
 
 ### SIO2MAN Version Compatibility:
-The SIO2MAN hook has not yet been updated to support SIO2MAN version 2.7 or newer (SDK 3.0.3). As a result, titles built using SDK 3.0.3 or later are currently unsupported. This limitation also applies to MX4SIO.
+The SIO2MAN hook only supports the SIO2MAN implementation from ps2sdk (which supports all known interfaces from 1.1 to 2.7), or SIO2MAN version 2.7 or newer (SCE SDK 3.0.3). This limitation also applies to MX4SIO.
 
 ### Deadlock Issues:
 During early testing, two games were identified to have deadlock issues caused by how the IOP handles semaphores and threads:

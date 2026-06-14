@@ -26,13 +26,9 @@ static u32 mmce_sio2_port_ctrl2;
 static u32 sio2_save_ctrl;
 static int event_flag = -1;
 
-//SIO2MAN's intr handler
-int (*sio2man_intr_handler_ptr)(void *arg);
-void *sio2man_intr_arg_ptr;
-
 //Replacement intr handler
-int (*mmce_sio2_intr_handler_ptr)(void *arg) = NULL;
-void *mmce_sio2_intr_arg_ptr = NULL;
+static int (*mmce_sio2_intr_handler_ptr)(void *arg);
+static void *mmce_sio2_intr_arg_ptr;
 
 iop_sys_clock_t timeout_200ms;
 iop_sys_clock_t timeout_1s;
@@ -131,18 +127,13 @@ void mmce_sio2_deinit()
 
 void mmce_sio2_lock()
 {
-    int state;
-
     //Lock sio2man driver so we can use it exclusively
     sio2man_hook_sio2_lock();
 
     sio2_save_ctrl = inl_sio2_ctrl_get();
 
     //Swap SIO2MAN's intr handler with ours
-    CpuSuspendIntr(&state);
-    mmce_sio2_intrman_internals_ptr->interrupt_handler_table[17].handler = mmce_sio2_intr_handler_ptr; 
-    mmce_sio2_intrman_internals_ptr->interrupt_handler_table[17].userdata = mmce_sio2_intr_arg_ptr;
-    CpuResumeIntr(state);
+    sio2man_hook_sio2_set_intr_handler(mmce_sio2_intr_handler_ptr, mmce_sio2_intr_arg_ptr);
 
     //Copy port ctrl settings to SIO2 registers
     inl_sio2_portN_ctrl1_set(mmce_port, mmce_sio2_port_ctrl1);
@@ -151,13 +142,8 @@ void mmce_sio2_lock()
 
 void mmce_sio2_unlock()
 {
-    int state;
-
     //Swap our intr handler with SIO2MAN's intr handler
-    CpuSuspendIntr(&state);
-    mmce_sio2_intrman_internals_ptr->interrupt_handler_table[17].handler = sio2man_intr_handler_ptr; 
-    mmce_sio2_intrman_internals_ptr->interrupt_handler_table[17].userdata = sio2man_intr_arg_ptr;
-    CpuResumeIntr(state);
+    sio2man_hook_sio2_set_intr_handler(NULL, NULL);
 
     //Restore ctrl state, and reset STATE + FIFOS
     inl_sio2_ctrl_set(sio2_save_ctrl | 0xc);
