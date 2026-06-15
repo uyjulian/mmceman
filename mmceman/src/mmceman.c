@@ -3,7 +3,6 @@
 #include <string.h>
 #include <sysclib.h>
 
-#include "ioplib.h"
 #include "irx_imports.h"
 
 #include "sio2man_hook.h"
@@ -54,7 +53,7 @@ static void mmce_init(int port)
     }
 }
 
-int __start(int argc, char *argv[])
+int __start(int argc, char *argv[], void *startaddr, ModuleInfo_t *mi)
 {
     int rv;
 
@@ -74,19 +73,14 @@ int __start(int argc, char *argv[])
     //Attach filesystem to iomanX
     mmce_fs_register();
 
-    iop_library_t * lib_modload = ioplib_getByName("modload");
-    if (lib_modload != NULL) {
-        DPRINTF("modload 0x%x detected\n", lib_modload->version);
-        if (lib_modload->version > 0x102) //IOP is running a MODLOAD version which supports unloading IRX Modules
-            return MODULE_REMOVABLE_END; // and we do support getting unloaded...
-    } else {
-        DPRINTF("modload not detected! this is serious!\n");
-    }
-
+    // If modload has certain flags set indicating new version,
+    // set the unloadable flag
+    if (mi && ((mi->newflags & 2) != 0))
+        mi->newflags |= 0x10;
     return MODULE_RESIDENT_END;
 }
 
-int __stop(int argc, char *argv[])
+int __stop(int argc, char *argv[], void *startaddr, ModuleInfo_t *mi)
 {
     DPRINTF("Unloading module\n");
     
@@ -96,10 +90,10 @@ int __stop(int argc, char *argv[])
     return MODULE_NO_RESIDENT_END;
 }
 
-int _start(int argc, char *argv[])
+int _start(int argc, char *argv[], void *startaddr, ModuleInfo_t *mi)
 {
     if (argc >= 0) 
-        return __start(argc, argv);
+        return __start(argc, argv, startaddr, mi);
     else
-        return __stop(-argc, argv);
+        return __stop(-argc, argv, startaddr, mi);
 }
