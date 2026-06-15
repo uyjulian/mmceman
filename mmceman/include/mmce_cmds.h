@@ -17,6 +17,7 @@ enum mmce_cmds {
     MMCE_CMD_GET_GAMEID,
     MMCE_CMD_SET_GAMEID,
     MMCE_CMD_RESET,
+    MMCE_CMD_SET_CARD_CHANNEL,
     MMCE_SETTINGS_ACK_WAIT_CYCLES,
     MMCE_SETTINGS_SET_ALARMS,
 };
@@ -36,6 +37,7 @@ enum mmce_cmds_fs {
     MMCE_CMD_FS_DREAD = 0x4b,
     MMCE_CMD_FS_GETSTAT = 0x4c,
     MMCE_CMD_FS_CHSTAT = 0x4d,
+    MMCE_CMD_FS_RENAME = 0x4e,
     MMCE_CMD_FS_LSEEK64 = 0x53,
     MMCE_CMD_FS_READ_SECTOR = 0x58,
 };
@@ -54,4 +56,6 @@ int mmce_cmd_set_channel(u8 mode, u16 num);
 int mmce_cmd_get_gameid(void *ptr);
 int mmce_cmd_set_gameid(void *ptr);
 int mmce_cmd_reset(void);
+int mmce_cmd_set_card_channel(u8 type, u16 card, u16 chan);
+
 #endif

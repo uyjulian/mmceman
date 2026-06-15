@@ -113,11 +113,11 @@ If a read is requested for more data than the file contains or if an error occur
  - return the *actual* number of bytes read as the value in Packet #3 "Bytes Read".
 
 For example: If something requests a 2048 byte read, and only 40 bytes were read (either due to a read error or the file being smaller than that), the MMCE should clock out the remaining 2008 bytes with dummy data and set the bytes read value in the footer packet to 40.
- 
-The MMCE has up to 2 seconds to respond to the header packet with a return value, during 
-this time the MMCE should begin reading the data ahead of time in anticipation of the next packet. 
+
+The MMCE has up to 2 seconds to respond to the header packet with a return value, during
+this time the MMCE should begin reading the data ahead of time in anticipation of the next packet.
 At minimum the first byte of the requested data is required before the start of the next packet.
-This is true for all subsequent data packets as well. This is because the SIO2 will *NOT* wait for 
+This is true for all subsequent data packets as well. This is because the SIO2 will *NOT* wait for
 the /ACK line to be pulled down until *after* the first byte has already been transferred.
 
 |   Bytes:    |  0   |                 |  1   |                 |  2   |
@@ -128,10 +128,10 @@ the /ACK line to be pulled down until *after* the first byte has already been tr
 Valid data needs to go out on byte 0.
 
 If the fd is invalid or another error has occurred, the MMCE is to send a return value of 1.
-The PS2 will not proceed to the second packet. The get status command can be used to 
+The PS2 will not proceed to the second packet. The get status command can be used to
 determine the cause of the error. (get status not implemented yet)
 
-If a return value is not received at all due to the MMCE taking too long to read ahead 
+If a return value is not received at all due to the MMCE taking too long to read ahead
 / the 2 second wait timeout is reached, the PS2 will not proceed to the second packet
 
 SD2PSX specific notes:
@@ -145,18 +145,18 @@ The SD2PSX resets all PIO state machines and clears all FIFO data when the chip 
 
 This is undesirable because it limits the maximum transfer size to 255 bytes instead of 256 and also requires a memcpy operation on the IOP.
 
-The current solution involves starting the data read process immediately after receiving the length 
-in the header, but before sending the return value in the header packet. This provides the SD2PSX 
-with 2 seconds to read 256 bytes from the SD card and ensures the first byte is placed in the TX FIFO 
+The current solution involves starting the data read process immediately after receiving the length
+in the header, but before sending the return value in the header packet. This provides the SD2PSX
+with 2 seconds to read 256 bytes from the SD card and ensures the first byte is placed in the TX FIFO
 immediately after reset.
 
 This approach also staggers reads, so that after a brief initial delay, data is almost always ready
-for the PS2 as subsequent packets arrive. The delay is further minimized during sequential reads, as 
-the SD2PSX reads one additional chunk (256 bytes) beyond what was requested. 
+for the PS2 as subsequent packets arrive. The delay is further minimized during sequential reads, as
+the SD2PSX reads one additional chunk (256 bytes) beyond what was requested.
 
-The SD2PSX utilizes a ring buffer, which is filled by core0 until the total bytes read equals the 
-requested length, while core1 simultaneously sends the already-read data to the PS2. For all read 
-packets, the ring buffer's status is checked before sending the last byte of the packet to ensure the 
+The SD2PSX utilizes a ring buffer, which is filled by core0 until the total bytes read equals the
+requested length, while core1 simultaneously sends the already-read data to the PS2. For all read
+packets, the ring buffer's status is checked before sending the last byte of the packet to ensure the
 next 256-byte chunk is ready, and the first byte can be placed in the TX FIFO immediately after reset.
 
 ### 0x43 - File: write [multi-packet] [implemented]
@@ -211,7 +211,7 @@ Write ready signifies that there is a 4KB empty buffer ready to write to.
 
 SD2PSX specific notes:
 The current SD2PSX implementation waits for 4KB or length to be written to the buffer
-before starting the write. 
+before starting the write.
 
 
 ### 0x44 - File: lseek [implemented]
@@ -276,7 +276,7 @@ Packet #3:
 | 0x01   | 0xff | var  | Return value     |
 | 0x02   | 0xff | 0xff | Termination byte |
 
-Notes: 
+Notes:
 Fileio's mkdir does not have a flag param
 
 If an error occurs, the MMCE is to send a return value of 1 and copy the errno value
@@ -375,7 +375,7 @@ Packet #3:
 |----------|------|------|-------------|
 | 0x00-var | 0xff | var  | Filename    |
 
-Packet #4: 
+Packet #4:
 | offset | out  |  in  |   description    |
 |--------|------|------|------------------|
 | 0x00   | 0xff | 0x00 | Padding          |
@@ -383,7 +383,7 @@ Packet #4:
 | 0x02   | 0xff | 0xff | Termination byte |
 
 Notes:
-The MMCE is expected to convert it's stat data to match that of the PS2's io_stat_t 
+The MMCE is expected to convert it's stat data to match that of the PS2's io_stat_t
 
 The first byte of the filename is needed prior to the start of the filename packet
 
@@ -450,6 +450,32 @@ The "Attr" value is not currently used.
 
 ### 0x4d - File: chstat [N/A]
 ### 0x4e - File: rename [N/A]
+
+Packet #1:
+| offset | out  |  in  | description |
+|--------|------|------|-------------|
+| 0x03   | 0xff | 0x00 | Padding     |
+
+Packet #2:
+|  offset  | out |  in  |  description   |
+|----------|-----|------|----------------|
+| 0x00-var | var | 0x00 | Old Path       |
+
+Packet #3:
+|  offset  | out |  in  |  description   |
+|----------|-----|------|----------------|
+| 0x00-var | var | 0x00 | New Path       |
+
+Packet #4:
+| offset | out  |  in  |   description    |
+|--------|------|------|------------------|
+| 0x00   | 0xff | 0x00 | Padding          |
+| 0x01   | 0xff | var  | Return value     |
+| 0x02   | 0xff | 0xff | Termination byte |
+
+Notes:
+The "Old Path" and the "New Path" packets will be of variable size and should include the null terminator.
+
 ### 0x4f - File: chdir [N/A]
 ### 0x50 - File: sync [N/A]
 ### 0x51 - File: mount [N/A]
@@ -524,5 +550,5 @@ Sending the upper 8 bits of the sector and length can be skipped
 as the sector count will never be higher than 1 << 23 (0x800000)
 
 As a general rule of thumb, sector reads behave the same as 0x42 - File Read
-in terms of the way errors are handled, and how transfers are broken into 
+in terms of the way errors are handled, and how transfers are broken into
 smaller chunks of 256.
